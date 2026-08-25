@@ -157,25 +157,4 @@ Todos fictícios: 20 elevadores em 6 prédios, 6 técnicos e 60 ocorrências esp
 
 ---
 
-## Antes de apresentar
-
-As datas do seed são relativas ao momento em que ele é criado, para a demo parecer sempre
-"de agora". **Aperte "Resetar demo" no `index.html` pouco antes de começar** — isso limpa
-o `localStorage`, recarrega os dados iniciais e devolve os dois P1 com o prazo cheio.
-Serve também para reapresentar do zero, se algo sair do trilho no meio.
-
-### Roteiro sugerido (5 minutos)
-
-1. **`index.html`** — mostrar o ciclo e escolher *Passageiro*.
-2. **`sos.html`** — "Estou preso", 2 pessoas, enviar. A confirmação já traz **P1** e o
-   motivo da classificação.
-3. **`ocorrencias.html`** — o chamado está lá, no topo, com o SLA de 15 min correndo.
-4. **`ocorrencia.html`** — apontar a justificativa da regra, escolher o técnico
-   (o especialista já vem sugerido) e despachar: o modal mostra a mensagem que vai ao WhatsApp.
-5. **`tecnico.html`** — *Cheguei*, laudo, *Resolvido*.
-6. **`dashboard.html`** — KPIs, ocorrências por semana e o ranking. Clicar num equipamento
-   crítico e abrir a decomposição do Risk Score: é o fecho do argumento.
-
----
-
 Projeto acadêmico. Prédios, endereços, técnicos e telefones são fictícios.
