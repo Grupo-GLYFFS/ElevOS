@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — ElevOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/elevos.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="navbar"></div>
+
+<main class="container-xl py-4">
+
+  <div class="mb-4">
+    <p class="rotulo-secao mb-1">Visao da gestao</p>
+    <h1 class="h3 mb-1">Dashboard operacional</h1>
+    <p class="texto-fraco small mb-0">Ultimas 12 semanas &middot; base viva da demo, atualiza conforme voce opera as telas.</p>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4" id="kpis"></div>
+
+  <div class="row g-4">
+    <!-- grafico -->
+    <div class="col-12 col-lg-7">
+      <div class="painel p-3 p-md-4 h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <p class="rotulo-secao mb-1">Ocorrencias por semana</p>
+            <p class="texto-fraco small mb-0">12 semanas, da mais antiga para a mais recente</p>
+          </div>
+          <span class="pill-info" id="totalPeriodo"></span>
+        </div>
+        <div class="grafico-barras" id="grafico"></div>
+        <div class="grafico-legenda d-none d-md-flex" id="graficoLegenda"></div>
+      </div>
+    </div>
+
+    <!-- distribuicao por prioridade -->
+    <div class="col-12 col-lg-5">
+      <div class="painel p-3 p-md-4 h-100">
+        <p class="rotulo-secao mb-3">Distribuicao por prioridade</p>
+        <div id="distribuicao"></div>
+        <hr class="divisor my-3">
+        <p class="rotulo-secao mb-2">Fila agora</p>
+        <div id="filaAgora" class="small"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ranking risk score -->
+  <div class="painel p-3 p-md-4 mt-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+      <div>
+        <p class="rotulo-secao mb-1">Risk Score dos equipamentos</p>
+        <p class="texto-fraco small mb-0">0 a 100, maior = mais saudavel. Clique para ver a decomposicao do calculo.</p>
+      </div>
+      <div class="d-flex gap-2">
+        <span class="pill-info" style="color:#FCA5A5">0–40 critico</span>
+        <span class="pill-info" style="color:#FDE047">41–70 atencao</span>
+        <span class="pill-info" style="color:#86EFAC">71–100 saudavel</span>
+      </div>
+    </div>
+    <div class="row g-3 mt-1" id="ranking"></div>
+  </div>
+
+</main>
+
+<!-- modal de decomposicao -->
+<div class="modal" id="modalScore" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalScoreTitulo">Decomposicao do Risk Score</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="modalScoreCorpo"></div>
+      <div class="modal-footer">
+        <a class="btn btn-suave btn-sm" id="linkOcorrenciasElev" href="ocorrencias.html">Ver ocorrencias do predio</a>
+        <button class="btn btn-primary btn-sm" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/regras.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script>
+Store.init();
+renderizarCasca("dashboard");
+
+const DIA = 24 * 60 * 60 * 1000;
+
+function riscos() {
+  const ocs = Store.ocorrencias();
+  return Store.elevadores()
+    .map((e) => ({ elevador: e, risco: calcularRiskScore(e, ocs.filter((o) => o.elevadorId === e.id)) }))
+    .sort((a, b) => a.risco.score - b.risco.score);
+}
+
+/* ------------------------------------------------------------------ KPIs */
+function renderKpis() {
+  const ocs = Store.ocorrencias();
+
+  const despachadas = ocs.filter((o) => o.despachadoEm);
+  const respostaMedia = despachadas.length
+    ? despachadas.reduce((s, o) => s + (new Date(o.despachadoEm) - new Date(o.criadoEm)) / 60000, 0) / despachadas.length
+    : 0;
+
+  const cumpridas = ocs.filter((o) => estadoSla(o).cumprido).length;
+  const taxaSla = ocs.length ? (cumpridas / ocs.length) * 100 : 100;
+  const criticos = riscos().filter((r) => r.risco.faixa === "critico");
+
+  const cartao = (valor, unidade, rotulo, detalhe, cor) => `
+    <div class="col-12 col-md-4">
+      <div class="painel p-3 p-md-4 h-100">
+        <p class="rotulo-secao mb-2">${rotulo}</p>
+        <div class="kpi-valor" ${cor ? `style="color:${cor}"` : ""}>${valor}<span class="fs-6 fw-normal texto-fraco ms-1">${unidade}</span></div>
+        <p class="texto-fraco small mb-0 mt-2">${detalhe}</p>
+      </div>
+    </div>`;
+
+  $("#kpis").innerHTML =
+    cartao(respostaMedia.toFixed(1).replace(".", ","), "min", "Tempo medio de resposta", `Da abertura ate o despacho, em ${despachadas.length} chamados.`) +
+    cartao(taxaSla.toFixed(1).replace(".", ","), "%", "SLA cumprido", `${ocs.length - cumpridas} de ${ocs.length} chamados estouraram o prazo.`, taxaSla >= 95 ? "var(--elevos-verde)" : "var(--elevos-amarelo)") +
+    cartao(criticos.length, "", "Equipamentos criticos", criticos.length ? criticos.map((c) => c.elevador.codigo).join(", ") : "Nenhum equipamento na faixa critica.", criticos.length ? "var(--elevos-vermelho)" : "var(--elevos-verde)");
+}
+
+/* ------------------------------------------- grafico de barras (CSS puro) */
+function renderGrafico() {
+  const agora = Date.now();
+  const semanas = [];
+  for (let i = 11; i >= 0; i--) {
+    const inicio = agora - (i + 1) * 7 * DIA;
+    const fim = agora - i * 7 * DIA;
+    const qtd = Store.ocorrencias().filter((o) => {
+      const t = new Date(o.criadoEm).getTime();
+      return t >= inicio && t < fim;
+    }).length;
+    semanas.push({ qtd, rotulo: new Date(inicio).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) });
+  }
+
+  const maximo = Math.max(...semanas.map((s) => s.qtd), 1);
+
+  $("#grafico").innerHTML = semanas
+    .map((s) => `<div class="coluna" title="${s.qtd} ocorrencia(s) na semana de ${s.rotulo}">
+        <div class="valor">${s.qtd}</div>
+        <div class="barra" style="height:${(s.qtd / maximo) * 100}%"></div>
+      </div>`)
+    .join("");
+
+  $("#graficoLegenda").innerHTML = semanas.map((s) => `<span>${s.rotulo}</span>`).join("");
+  $("#totalPeriodo").textContent = `${semanas.reduce((a, s) => a + s.qtd, 0)} no periodo`;
+}
+
+/* ------------------------------------------------ distribuicao e fila --- */
+function renderDistribuicao() {
+  const ocs = Store.ocorrencias();
+  const cores = { P1: "var(--elevos-vermelho)", P2: "var(--elevos-amarelo)", P3: "var(--elevos-verde)", P4: "var(--elevos-cinza)" };
+
+  $("#distribuicao").innerHTML = ["P1", "P2", "P3", "P4"]
+    .map((p) => {
+      const qtd = ocs.filter((o) => o.prioridade === p).length;
+      const pct = ocs.length ? (qtd / ocs.length) * 100 : 0;
+      return `<div class="mb-2">
+        <div class="d-flex justify-content-between small mb-1">
+          <span>${PRIORIDADES[p].rotulo}</span>
+          <span class="fonte-mono texto-fraco">${qtd} &middot; ${pct.toFixed(0)}%</span>
+        </div>
+        <div class="barra-fator"><div style="width:${pct}%;background:${cores[p]}"></div></div>
+      </div>`;
+    })
+    .join("");
+
+  const abertas = ordenarFila(ocs.filter(emAberto));
+  $("#filaAgora").innerHTML = abertas.length
+    ? abertas.slice(0, 4).map((o) => {
+        const sla = estadoSla(o);
+        return `<a href="ocorrencia.html?id=${o.id}" class="d-flex align-items-center gap-2 py-2 text-decoration-none border-bottom" style="border-color:var(--elevos-border)!important">
+          ${badgePrioridade(o.prioridade)}
+          <span class="codigo-elevador">${esc(Store.elevador(o.elevadorId).codigo)}</span>
+          <span class="sla ${sla.classe} ms-auto">${sla.texto}</span>
+        </a>`;
+      }).join("")
+    : `<p class="texto-fraco mb-0">Nenhuma ocorrencia em aberto.</p>`;
+}
+
+/* ------------------------------------------------------------- ranking -- */
+function renderRanking() {
+  $("#ranking").innerHTML = riscos()
+    .map(({ elevador, risco }) => `
+      <div class="col-12 col-md-6 col-xl-4">
+        <button type="button" class="card card-clicavel w-100 text-start border-0 p-0" data-elev="${elevador.id}">
+          <div class="card-body d-flex align-items-center gap-3 p-3">
+            <div class="anel-risco" style="--pct:${risco.score};--cor:${risco.cor}"><span>${risco.score}</span></div>
+            <div class="flex-fill min-w-0">
+              <div class="codigo-elevador fw-bold">${esc(elevador.codigo)}</div>
+              <div class="small texto-fraco text-truncate">${esc(elevador.predio)}</div>
+              <div class="small" style="color:${risco.cor}">${risco.rotuloFaixa} &middot; ${risco.qtdOcorrencias} em 90d</div>
+            </div>
+          </div>
+        </button>
+      </div>`)
+    .join("");
+
+  $$("#ranking [data-elev]").forEach((btn) =>
+    btn.addEventListener("click", () => abrirDecomposicao(Number(btn.dataset.elev)))
+  );
+}
+
+/* --------------------------------------------- modal de decomposicao ---- */
+function abrirDecomposicao(elevadorId) {
+  const elevador = Store.elevador(elevadorId);
+  const risco = calcularRiskScore(elevador, Store.historicoDoElevador(elevadorId));
+
+  $("#modalScoreTitulo").innerHTML = `${esc(elevador.codigo)} <span class="fs-6 fw-normal texto-fraco">&middot; ${esc(elevador.predio)}</span>`;
+  $("#linkOcorrenciasElev").href = `ocorrencias.html?predio=${encodeURIComponent(elevador.predio)}`;
+
+  const linhas = risco.fatores
+    .map((f) => `
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-baseline small mb-1">
+          <span>${f.nome} <span class="pill-info ms-1">peso ${(f.peso * 100).toFixed(0)}%</span></span>
+          <span class="fonte-mono">${f.valor.toFixed(0)}/100</span>
+        </div>
+        <div class="barra-fator mb-1"><div style="width:${f.valor}%;background:${faixaCor(f.valor)}"></div></div>
+        <div class="d-flex justify-content-between small texto-fraco">
+          <span>${f.detalhe}</span>
+          <span class="fonte-mono">contribui ${f.contribuicao.toFixed(1)} pt</span>
+        </div>
+      </div>`)
+    .join("");
+
+  $("#modalScoreCorpo").innerHTML = `
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <div class="anel-risco" style="--pct:${risco.score};--cor:${risco.cor};width:78px;height:78px;flex:0 0 78px">
+        <span style="font-size:1.3rem">${risco.score}</span>
+      </div>
+      <div>
+        <div class="h5 mb-1" style="color:${risco.cor}">${risco.rotuloFaixa}</div>
+        <div class="small texto-fraco">
+          Instalado em ${fmtData(elevador.dataInstalacao)} &middot; ${elevador.andares} andares<br>
+          Ultima preventiva ha ${risco.diasManutencao} dias
+        </div>
+      </div>
+    </div>
+    <p class="rotulo-secao mb-3">Os cinco fatores e seus pesos</p>
+    ${linhas}
+    <hr class="divisor my-3">
+    <p class="small texto-fraco mb-0">
+      Score = soma das contribuicoes = <span class="fonte-mono">${risco.fatores.map((f) => f.contribuicao.toFixed(1)).join(" + ")} = ${risco.score}</span>.
+      Nada aqui e estimado por IA: cada fator sai direto do historico registrado.
+    </p>`;
+
+  new bootstrap.Modal($("#modalScore")).show();
+}
+
+const faixaCor = (v) => (v <= 40 ? "var(--elevos-vermelho)" : v <= 70 ? "var(--elevos-amarelo)" : "var(--elevos-verde)");
+
+/* -------------------------------------------------------------- render -- */
+renderKpis();
+renderGrafico();
+renderDistribuicao();
+renderRanking();
+setInterval(renderDistribuicao, 1000);
+</script>
+</body>
+</html>

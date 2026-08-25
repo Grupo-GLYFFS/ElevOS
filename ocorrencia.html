@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ocorrencia — ElevOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/elevos.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="navbar"></div>
+<main class="container-xl py-4" id="conteudo"></main>
+
+<!-- modal: prévia da mensagem de despacho -->
+<div class="modal" id="modalWhats" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Mensagem de despacho</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small texto-fraco">Gerada pela regra de despacho a partir da ocorrencia, do historico do equipamento e do kit sugerido. Vai por deep link <code>wa.me</code>, sem API paga.</p>
+        <pre class="painel p-3 small mb-0" style="white-space:pre-wrap" id="previaWhats"></pre>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-suave" data-bs-dismiss="modal">Fechar</button>
+        <a class="btn btn-primary" id="abrirWhats" target="_blank" rel="noopener">Abrir no WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/regras.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script>
+Store.init();
+renderizarCasca("ocorrencias");
+
+const idOcorrencia = Number(param("id"));
+let oc = Store.ocorrencia(idOcorrencia);
+
+if (!oc) {
+  $("#conteudo").innerHTML = `<div class="painel p-5 text-center">
+    <h1 class="h5 mb-2">Ocorrencia nao encontrada</h1>
+    <p class="texto-fraco small">O parametro <code>?id=</code> nao corresponde a nenhum chamado.</p>
+    <a class="btn btn-primary btn-sm" href="ocorrencias.html">Voltar para a fila</a>
+  </div>`;
+} else {
+  render();
+  setInterval(atualizarSla, 1000);
+}
+
+function render() {
+  oc = Store.ocorrencia(idOcorrencia);
+  const elev = Store.elevador(oc.elevadorId);
+  const historico = Store.historicoDoElevador(elev.id, oc.id);
+  const risco = calcularRiskScore(elev, Store.historicoDoElevador(elev.id));
+  const tecAtual = oc.tecnicoId ? Store.tecnico(oc.tecnicoId) : null;
+  const sla = estadoSla(oc);
+
+  // ja atribuido? mantem. senao, sugere o especialista disponivel para o tipo.
+  const sugerido = Store.tecnicos().find((t) => t.disponivel && recomendado(t, oc.tipo));
+  const idSelecionado = tecAtual ? tecAtual.id : sugerido ? sugerido.id : null;
+
+  const opcoesTecnico = Store.tecnicos()
+    .map((t) => {
+      const rec = recomendado(t, oc.tipo) ? " — recomendado" : "";
+      const ind = t.disponivel ? "" : " (indisponivel)";
+      const sel = idSelecionado === t.id ? "selected" : "";
+      return `<option value="${t.id}" ${t.disponivel ? "" : "disabled"} ${sel}>${esc(t.nome)} · ${esc(t.especialidade)}${rec}${ind}</option>`;
+    })
+    .join("");
+
+  const linhasHistorico = historico.length
+    ? historico.slice(0, 6).map((h) => `<div class="d-flex flex-wrap align-items-center gap-2 py-2 border-bottom" style="border-color:var(--elevos-border)!important">
+        ${badgePrioridade(h.prioridade)}
+        <span class="small">${esc(rotuloTipo(h.tipo))}</span>
+        <span class="small texto-fraco ms-auto">${fmtData(h.criadoEm)}</span>
+        ${badgeStatus(h.status)}
+      </div>`).join("")
+    : `<p class="small texto-fraco mb-0">Nenhuma outra ocorrencia registrada neste equipamento.</p>`;
+
+  $("#conteudo").innerHTML = `
+  <a href="ocorrencias.html" class="small text-decoration-none">&larr; Voltar para a fila</a>
+
+  <div class="d-flex flex-wrap align-items-center gap-2 mt-3 mb-4">
+    ${badgePrioridade(oc.prioridade)}
+    <h1 class="h3 mb-0">Chamado #${oc.id}</h1>
+    ${badgeStatus(oc.status)}
+    <span class="sla ${sla.classe}" id="slaTopo">${sla.texto}</span>
+  </div>
+
+  <div class="row g-4">
+    <!-- coluna principal -->
+    <div class="col-12 col-lg-7">
+
+      <!-- por que essa prioridade -->
+      <div class="painel p-3 p-md-4 mb-4">
+        <p class="rotulo-secao mb-2">Por que essa prioridade</p>
+        <p class="mb-2">${esc(oc.motivoPrioridade)}</p>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="pill-info">Regra deterministica, sem IA</span>
+          <span class="pill-info">SLA ${formatarDuracao(oc.slaMinutos)}</span>
+          <span class="pill-info">Origem: ${esc(rotuloOrigem(oc.origem))}</span>
+        </div>
+      </div>
+
+      <!-- dados -->
+      <div class="painel p-3 p-md-4 mb-4">
+        <p class="rotulo-secao mb-3">Ocorrencia</p>
+        <div class="row g-3 small">
+          <div class="col-6"><span class="texto-fraco d-block">Equipamento</span><span class="codigo-elevador fw-bold">${esc(elev.codigo)}</span></div>
+          <div class="col-6"><span class="texto-fraco d-block">Tipo</span>${esc(rotuloTipo(oc.tipo))}</div>
+          <div class="col-6"><span class="texto-fraco d-block">Predio</span>${esc(elev.predio)}</div>
+          <div class="col-6"><span class="texto-fraco d-block">Andares</span>${elev.andares}</div>
+          <div class="col-12"><span class="texto-fraco d-block">Endereco</span>${esc(elev.endereco)}</div>
+          <div class="col-6"><span class="texto-fraco d-block">Abertura</span>${fmtDataHora(oc.criadoEm)} (${tempoRelativo(oc.criadoEm)})</div>
+          <div class="col-6"><span class="texto-fraco d-block">Pessoas presas</span>${oc.pessoasPresas || "nenhuma"}</div>
+          ${oc.telefoneContato ? `<div class="col-6"><span class="texto-fraco d-block">Contato</span>${esc(oc.telefoneContato)}</div>` : ""}
+          ${oc.despachadoEm ? `<div class="col-6"><span class="texto-fraco d-block">Despachado</span>${fmtDataHora(oc.despachadoEm)}</div>` : ""}
+          ${oc.resolvidoEm ? `<div class="col-6"><span class="texto-fraco d-block">Resolvido</span>${fmtDataHora(oc.resolvidoEm)}</div>` : ""}
+          <div class="col-12"><span class="texto-fraco d-block">Relato</span>${esc(oc.descricao) || "—"}</div>
+          ${oc.laudo ? `<div class="col-12"><span class="texto-fraco d-block">Laudo tecnico</span>${esc(oc.laudo)}</div>` : ""}
+        </div>
+      </div>
+
+      <!-- historico do equipamento -->
+      <div class="painel p-3 p-md-4">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <p class="rotulo-secao mb-0">Historico de ${esc(elev.codigo)}</p>
+          <span class="pill-info">${historico.length} registro(s)</span>
+        </div>
+        ${linhasHistorico}
+      </div>
+    </div>
+
+    <!-- coluna de acao -->
+    <div class="col-12 col-lg-5">
+
+      <div class="painel p-3 p-md-4 mb-4">
+        <p class="rotulo-secao mb-3">Despacho</p>
+        <label class="form-label small" for="selTecnico">Tecnico</label>
+        <select class="form-select mb-3" id="selTecnico" ${oc.status === "resolvida" ? "disabled" : ""}>${opcoesTecnico}</select>
+
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary" id="btnWhats" ${oc.status === "resolvida" ? "disabled" : ""}>
+            ${oc.despachadoEm ? "Reenviar via WhatsApp" : "Enviar via WhatsApp"}
+          </button>
+          <div class="d-flex gap-2">
+            <button class="btn btn-suave flex-fill" id="btnAtendimento"
+              ${oc.status === "em_atendimento" || oc.status === "resolvida" ? "disabled" : ""}>Em atendimento</button>
+            <button class="btn btn-suave flex-fill" id="btnResolver" ${oc.status === "resolvida" ? "disabled" : ""}>Resolvido</button>
+          </div>
+          ${oc.status !== "resolvida" ? `<a class="btn btn-outline-primary btn-sm" href="tecnico.html?id=${oc.id}">Abrir a visao do tecnico</a>` : ""}
+        </div>
+        ${tecAtual ? `<p class="small texto-fraco mt-3 mb-0">Atribuido a <strong>${esc(tecAtual.nome)}</strong> · ${esc(tecAtual.telefone)}</p>` : ""}
+      </div>
+
+      <div class="painel p-3 p-md-4 mb-4">
+        <p class="rotulo-secao mb-3">Kit sugerido</p>
+        <ul class="small mb-0 ps-3">${kitSugerido(oc.tipo).map((k) => `<li>${esc(k)}</li>`).join("")}</ul>
+      </div>
+
+      <div class="painel p-3 p-md-4">
+        <p class="rotulo-secao mb-3">Saude do equipamento</p>
+        <div class="d-flex align-items-center gap-3">
+          <div class="anel-risco" style="--pct:${risco.score};--cor:${risco.cor}"><span>${risco.score}</span></div>
+          <div class="small">
+            <div class="fw-semibold" style="color:${risco.cor}">${risco.rotuloFaixa}</div>
+            <div class="texto-fraco">${risco.qtdOcorrencias} ocorrencia(s) em 90 dias</div>
+            <div class="texto-fraco">${risco.diasManutencao} dias desde a preventiva</div>
+          </div>
+        </div>
+        <a class="btn btn-suave btn-sm w-100 mt-3" href="dashboard.html">Ver no dashboard</a>
+      </div>
+    </div>
+  </div>`;
+
+  ligarEventos();
+}
+
+/** Tecnico cuja especialidade combina com o tipo da ocorrencia. */
+function recomendado(tecnico, tipo) {
+  const mapa = {
+    preso: "Resgate",
+    parado: "Comando",
+    porta: "Portas",
+    ruido: "Tracao",
+    outro: "Manutencao",
+  };
+  return tecnico.especialidade.startsWith(mapa[tipo] || "");
+}
+
+function atualizarSla() {
+  const el = document.getElementById("slaTopo");
+  if (!el) return;
+  const sla = estadoSla(Store.ocorrencia(idOcorrencia));
+  el.textContent = sla.texto;
+  el.className = `sla ${sla.classe}`;
+}
+
+function ligarEventos() {
+  const btnWhats = $("#btnWhats");
+  if (btnWhats) btnWhats.addEventListener("click", despachar);
+
+  const btnAtend = $("#btnAtendimento");
+  if (btnAtend) btnAtend.addEventListener("click", () => { Store.registrarChegada(idOcorrencia); render(); });
+
+  const btnResolver = $("#btnResolver");
+  if (btnResolver) btnResolver.addEventListener("click", () => {
+    Store.resolver(idOcorrencia, "Atendimento concluido pela operacao.");
+    render();
+  });
+}
+
+function despachar() {
+  const tecnicoId = Number($("#selTecnico").value);
+  Store.despachar(idOcorrencia, tecnicoId);
+
+  const atual = Store.ocorrencia(idOcorrencia);
+  const elev = Store.elevador(atual.elevadorId);
+  const tec = Store.tecnico(tecnicoId);
+  const historico = Store.historicoDoElevador(elev.id, atual.id);
+  const mensagem = montarMensagemWhats(atual, elev, historico, linkTecnico(atual.id));
+
+  $("#previaWhats").textContent = mensagem;
+  const numero = "55" + tec.telefone.replace(/\D/g, "");
+  $("#abrirWhats").href = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+
+  new bootstrap.Modal($("#modalWhats")).show();
+  render();
+}
+</script>
+</body>
+</html>
