@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ElevOS — gestao de ocorrencias em elevadores</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/elevos.css" rel="stylesheet">
+</head>
+<body>
+
+<main class="container py-5">
+
+  <!-- cabecalho -->
+  <div class="text-center mb-5">
+    <div class="d-flex justify-content-center mb-3" id="logo"></div>
+    <h1 class="display-6 mb-2">Elev<span class="marca-os">OS</span></h1>
+    <p class="texto-fraco mb-3 col-12 col-md-8 mx-auto">
+      Plataforma de gestao de ocorrencias em elevadores: registra, classifica por urgencia,
+      prioriza o despacho para o campo e devolve a gestao um indicador de risco por equipamento.
+    </p>
+    <div class="d-flex justify-content-center flex-wrap gap-2">
+      <span class="pill-info">Challenge OTIS</span>
+      <span class="pill-info">FIAP &middot; Engenharia de Software</span>
+      <span class="pill-info">Demo navegavel</span>
+    </div>
+  </div>
+
+  <!-- fluxo -->
+  <div class="painel p-3 p-md-4 mb-5">
+    <p class="rotulo-secao text-center mb-3">O ciclo completo</p>
+    <div class="d-flex flex-wrap justify-content-center align-items-center gap-2 small" id="fluxo"></div>
+  </div>
+
+  <!-- perfis -->
+  <p class="rotulo-secao mb-3">Escolha por onde entrar</p>
+  <div class="row g-3 mb-5" id="perfis"></div>
+
+  <!-- estado atual da base -->
+  <div class="painel p-3 p-md-4 mb-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <p class="rotulo-secao mb-1">Base da demo</p>
+        <p class="small texto-fraco mb-0" id="estadoBase"></p>
+      </div>
+      <button class="btn btn-suave btn-sm" id="btnResetar">Resetar demo</button>
+    </div>
+  </div>
+
+  <p class="text-center texto-fraco small mb-0">
+    Projeto academico. Dados, predios, tecnicos e telefones sao ficticios.
+  </p>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/regras.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script>
+Store.init();
+$("#logo").innerHTML = logoElevos(64);
+
+if (Store.emMemoria()) {
+  const aviso = document.createElement("div");
+  aviso.className = "aviso-armazenamento text-center small py-2 px-3";
+  aviso.textContent = "O navegador bloqueou o armazenamento local: os dados nao vao persistir entre as telas. Abra a demo por um servidor local ou pelo link do Vercel.";
+  document.body.prepend(aviso);
+}
+
+/* --------------------------------------------------------------- fluxo -- */
+const ETAPAS = ["QR SOS", "Classificacao automatica", "Fila priorizada", "Despacho por WhatsApp", "Tecnico resolve", "Risk Score e dashboard"];
+$("#fluxo").innerHTML = ETAPAS
+  .map((e, i) => `${i ? '<span class="texto-fraco">&rarr;</span>' : ""}<span class="pill-info">${e}</span>`)
+  .join("");
+
+/* -------------------------------------------------------------- perfis -- */
+function urgenteEmAberto() {
+  const abertas = ordenarFila(Store.ocorrencias().filter(emAberto));
+  return abertas.length ? abertas[0] : null;
+}
+
+function renderPerfis() {
+  const urgente = urgenteEmAberto();
+  const perfis = [
+    {
+      titulo: "Passageiro",
+      chamada: "Escaneou o QR dentro da cabine",
+      detalhe: "Abre um chamado em tres toques, sem login. A urgencia e definida na hora.",
+      href: "sos.html?codigo=ELV-D-1818",
+      cta: "Abrir a tela do QR SOS",
+      icone: iconeTipo("preso"),
+    },
+    {
+      titulo: "Operacao",
+      chamada: "Central de despacho",
+      detalhe: "Fila ordenada por prioridade e espera, com o SLA correndo em cada chamado.",
+      href: "ocorrencias.html",
+      cta: "Ver a fila priorizada",
+      icone: iconeTipo("parado"),
+    },
+    {
+      titulo: "Gestor",
+      chamada: "Decisao sobre a carteira",
+      detalhe: "KPIs, ocorrencias por semana e o Risk Score de cada equipamento, com o calculo aberto.",
+      href: "dashboard.html",
+      cta: "Abrir o dashboard",
+      icone: iconeTipo("ruido"),
+    },
+    {
+      titulo: "Tecnico",
+      chamada: "Recebeu o link no WhatsApp",
+      detalhe: "Ordem de servico com endereco, historico do equipamento e kit sugerido.",
+      href: urgente ? `tecnico.html?id=${urgente.id}` : "ocorrencias.html",
+      cta: urgente ? `Atender o chamado #${urgente.id}` : "Ver a fila",
+      icone: iconeTipo("porta"),
+    },
+  ];
+
+  $("#perfis").innerHTML = perfis
+    .map((p) => `
+      <div class="col-12 col-md-6">
+        <a class="card card-clicavel h-100 text-decoration-none" href="${p.href}">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span class="btn-sos icone d-grid" style="width:44px;height:44px;flex:0 0 44px;color:var(--elevos-accent);background:rgba(0,212,255,.10);border:1px solid var(--elevos-border);border-radius:.6rem;place-items:center">${p.icone}</span>
+              <div>
+                <h2 class="h5 mb-0">${p.titulo}</h2>
+                <p class="small texto-fraco mb-0">${p.chamada}</p>
+              </div>
+            </div>
+            <p class="small mb-3">${p.detalhe}</p>
+            <span class="btn btn-outline-primary btn-sm">${p.cta}</span>
+          </div>
+        </a>
+      </div>`)
+    .join("");
+}
+
+/* --------------------------------------------------------- estado base -- */
+function renderEstado() {
+  const ocs = Store.ocorrencias();
+  const abertas = ocs.filter(emAberto).length;
+  const p1 = ocs.filter((o) => emAberto(o) && o.prioridade === "P1").length;
+  $("#estadoBase").innerHTML =
+    `${Store.elevadores().length} elevadores &middot; ${Store.tecnicos().length} tecnicos &middot; ${ocs.length} ocorrencias ` +
+    `(<strong>${abertas}</strong> em aberto, <strong style="color:var(--elevos-vermelho)">${p1}</strong> P1). ` +
+    `Resetar recarrega os dados iniciais — util para ensaiar de novo.`;
+}
+
+$("#btnResetar").addEventListener("click", () => {
+  Store.resetar();
+  renderPerfis();
+  renderEstado();
+});
+
+renderPerfis();
+renderEstado();
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atendimento — ElevOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/elevos.css" rel="stylesheet">
+</head>
+<body>
+
+<main class="container py-4">
+  <div class="col-12 col-md-6 mx-auto" id="tela"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/regras.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script>
+Store.init();
+
+const idOcorrencia = Number(param("id"));
+
+if (!Store.ocorrencia(idOcorrencia)) {
+  $("#tela").innerHTML = `<div class="painel p-4 text-center">
+    ${logoElevos(44)}
+    <h1 class="h5 mt-3 mb-2">Chamado nao encontrado</h1>
+    <p class="texto-fraco small mb-3">O link recebido nao aponta para um chamado valido.</p>
+    <a class="btn btn-primary btn-sm" href="ocorrencias.html">Ver a fila</a>
+  </div>`;
+} else {
+  render();
+  setInterval(() => {
+    const el = document.getElementById("slaTec");
+    if (!el) return;
+    const sla = estadoSla(Store.ocorrencia(idOcorrencia));
+    el.textContent = sla.texto;
+    el.className = `sla ${sla.classe}`;
+  }, 1000);
+}
+
+function render() {
+  const oc = Store.ocorrencia(idOcorrencia);
+  const elev = Store.elevador(oc.elevadorId);
+  const tec = oc.tecnicoId ? Store.tecnico(oc.tecnicoId) : null;
+  const historico = Store.historicoDoElevador(elev.id, oc.id);
+  const risco = calcularRiskScore(elev, Store.historicoDoElevador(elev.id));
+  const sla = estadoSla(oc);
+
+  const listaHistorico = historico.length
+    ? historico.slice(0, 4).map((h) => `<div class="d-flex align-items-center gap-2 py-2 border-bottom" style="border-color:var(--elevos-border)!important">
+        ${badgePrioridade(h.prioridade)}
+        <span class="small">${esc(rotuloTipo(h.tipo))}</span>
+        <span class="small texto-fraco ms-auto">${fmtData(h.criadoEm)}</span>
+      </div>`).join("")
+    : `<p class="small texto-fraco mb-0">Primeiro chamado deste equipamento.</p>`;
+
+  const acoes = oc.status === "resolvida"
+    ? `<div class="painel p-4 text-center">
+         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--elevos-verde)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+           <circle cx="12" cy="12" r="9.2"/><path d="M8 12.3l2.7 2.7L16.2 9.5"/>
+         </svg>
+         <h2 class="h6 mt-3 mb-1">Atendimento encerrado</h2>
+         <p class="texto-fraco small mb-2">Resolvido em ${formatarDuracao(sla.minutos)} &middot; ${sla.cumprido ? "dentro do SLA" : "fora do SLA"}</p>
+         <p class="small mb-3">${esc(oc.laudo || "")}</p>
+         <a class="btn btn-suave btn-sm" href="ocorrencias.html">Voltar para a fila</a>
+       </div>`
+    : `<div class="painel p-3 p-md-4">
+         <p class="rotulo-secao mb-3">Registro do atendimento</p>
+         <div class="d-grid gap-2 mb-3">
+           <button class="btn ${oc.chegadaEm ? "btn-suave" : "btn-primary"} btn-lg" id="btnCheguei" ${oc.chegadaEm ? "disabled" : ""}>
+             ${oc.chegadaEm ? `Chegada registrada as ${fmtHora(oc.chegadaEm)}` : "Cheguei ao local"}
+           </button>
+         </div>
+         <label class="form-label small" for="laudo">Laudo tecnico</label>
+         <textarea class="form-control mb-3" id="laudo" rows="4" placeholder="O que foi encontrado e o que foi feito"></textarea>
+         <div class="d-grid">
+           <button class="btn btn-primary btn-lg" id="btnResolvido">Resolvido</button>
+         </div>
+       </div>`;
+
+  $("#tela").innerHTML = `
+  <div class="d-flex align-items-center gap-2 mb-3">
+    ${logoElevos(34)}
+    <div>
+      <p class="rotulo-secao mb-0">Ordem de servico</p>
+      <span class="fonte-mono fw-bold">#${oc.id}</span>
+    </div>
+    <span class="sla ${sla.classe} ms-auto" id="slaTec">${sla.texto}</span>
+  </div>
+
+  <div class="painel p-3 p-md-4 mb-3 faixa-prio ${(PRIORIDADES[oc.prioridade] || PRIORIDADES.P4).classe}">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      ${badgePrioridade(oc.prioridade)}
+      ${badgeStatus(oc.status)}
+      <span class="pill-info">SLA ${formatarDuracao(oc.slaMinutos)}</span>
+    </div>
+    <h1 class="h5 mb-1">${esc(rotuloTipo(oc.tipo))}</h1>
+    <p class="codigo-elevador fw-bold mb-1">${esc(elev.codigo)}</p>
+    <p class="small mb-2">${esc(elev.predio)}<br><span class="texto-fraco">${esc(elev.endereco)}</span></p>
+    ${oc.pessoasPresas > 0 ? `<p class="mb-2"><span class="pill-info" style="color:#FCA5A5;border-color:rgba(239,68,68,.4)">${oc.pessoasPresas} pessoa(s) presa(s) na cabine</span></p>` : ""}
+    <p class="small mb-0"><span class="texto-fraco d-block">Relato</span>${esc(oc.descricao) || "—"}</p>
+    ${oc.telefoneContato ? `<p class="small mb-0 mt-2"><span class="texto-fraco d-block">Contato no local</span>${esc(oc.telefoneContato)}</p>` : ""}
+    ${tec ? `<p class="small mb-0 mt-2"><span class="texto-fraco d-block">Tecnico designado</span>${esc(tec.nome)} &middot; ${esc(tec.especialidade)}</p>` : ""}
+  </div>
+
+  <div class="painel p-3 p-md-4 mb-3">
+    <p class="rotulo-secao mb-2">Por que e ${oc.prioridade}</p>
+    <p class="small mb-0">${esc(oc.motivoPrioridade)}</p>
+  </div>
+
+  <div class="painel p-3 p-md-4 mb-3">
+    <p class="rotulo-secao mb-3">Kit sugerido</p>
+    <div id="kit">
+      ${kitSugerido(oc.tipo).map((k, i) => `
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="kit${i}">
+          <label class="form-check-label small" for="kit${i}">${esc(k)}</label>
+        </div>`).join("")}
+    </div>
+  </div>
+
+  <div class="painel p-3 p-md-4 mb-3">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="anel-risco" style="--pct:${risco.score};--cor:${risco.cor}"><span>${risco.score}</span></div>
+      <div class="small">
+        <div class="fw-semibold" style="color:${risco.cor}">Equipamento ${risco.rotuloFaixa.toLowerCase()}</div>
+        <div class="texto-fraco">${risco.qtdOcorrencias} ocorrencia(s) em 90 dias</div>
+        <div class="texto-fraco">Preventiva ha ${risco.diasManutencao} dias</div>
+      </div>
+    </div>
+    <p class="rotulo-secao mb-2">Historico recente</p>
+    ${listaHistorico}
+  </div>
+
+  ${acoes}
+
+  <p class="text-center small mt-3 mb-0"><a href="index.html" class="text-decoration-none texto-fraco">ElevOS &middot; inicio da demo</a></p>`;
+
+  const btnCheguei = $("#btnCheguei");
+  if (btnCheguei) btnCheguei.addEventListener("click", () => { Store.registrarChegada(idOcorrencia); render(); });
+
+  const btnResolvido = $("#btnResolvido");
+  if (btnResolvido) btnResolvido.addEventListener("click", () => {
+    const laudo = $("#laudo").value.trim();
+    Store.resolver(idOcorrencia, laudo || "Atendimento concluido em campo.");
+    render();
+  });
+}
+</script>
+</body>
+</html>

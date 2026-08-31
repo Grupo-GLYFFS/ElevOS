@@ -1,0 +1,350 @@
+/* ==========================================================================
+   ElevOS — identidade visual sobre o Bootstrap 5.3 (data-bs-theme="dark")
+   Sobrescreve as variaveis CSS do Bootstrap com a paleta da marca.
+   ========================================================================== */
+
+:root,
+[data-bs-theme="dark"] {
+  /* --- paleta da marca --- */
+  --elevos-bg: #0A0E1A;
+  --elevos-surface: #111827;
+  --elevos-surface-2: #161F33;
+  --elevos-border: rgba(0, 212, 255, .15);
+  --elevos-border-forte: rgba(0, 212, 255, .35);
+  --elevos-accent: #00D4FF;
+  --elevos-verde: #22C55E;
+  --elevos-amarelo: #EAB308;
+  --elevos-vermelho: #EF4444;
+  --elevos-cinza: #6B7280;
+  --elevos-texto: #E5E7EB;
+  --elevos-texto-fraco: #94A3B8;
+
+  /* --- Bootstrap --- */
+  --bs-body-bg: var(--elevos-bg);
+  --bs-body-color: var(--elevos-texto);
+  --bs-emphasis-color: #F9FAFB;
+  --bs-secondary-color: var(--elevos-texto-fraco);
+  --bs-tertiary-bg: var(--elevos-surface-2);
+  --bs-border-color: var(--elevos-border);
+  --bs-border-color-translucent: var(--elevos-border);
+  --bs-primary: #00D4FF;
+  --bs-primary-rgb: 0, 212, 255;
+  --bs-link-color: var(--elevos-accent);
+  --bs-link-color-rgb: 0, 212, 255;
+  --bs-link-hover-color: #7BE7FF;
+  --bs-body-font-family: "Inter", system-ui, -apple-system, sans-serif;
+  --bs-font-monospace: "JetBrains Mono", ui-monospace, monospace;
+  --bs-heading-color: #F9FAFB;
+}
+
+body {
+  background-color: var(--elevos-bg);
+  background-image:
+    radial-gradient(900px 480px at 12% -8%, rgba(0, 212, 255, .10), transparent 60%),
+    radial-gradient(700px 400px at 100% 0%, rgba(0, 212, 255, .05), transparent 55%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  letter-spacing: -.01em;
+}
+
+h1, h2, h3, h4, h5, h6, .fonte-titulo {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+.mono, code, .fonte-mono { font-family: var(--bs-font-monospace); }
+
+.codigo-elevador {
+  font-family: var(--bs-font-monospace);
+  letter-spacing: .02em;
+  color: var(--elevos-accent);
+}
+
+/* ---------- navbar ---------- */
+.navbar-elevos {
+  background: rgba(10, 14, 26, .82);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--elevos-border);
+}
+.navbar-elevos .nav-link {
+  color: var(--elevos-texto-fraco);
+  font-size: .92rem;
+  font-weight: 500;
+  border-radius: .5rem;
+  padding: .35rem .75rem;
+}
+.navbar-elevos .nav-link:hover { color: var(--elevos-texto); background: rgba(255, 255, 255, .04); }
+.navbar-elevos .nav-link.ativo {
+  color: var(--elevos-accent);
+  background: rgba(0, 212, 255, .10);
+}
+.marca-elevos {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  color: #F9FAFB;
+  text-decoration: none;
+  font-size: 1.15rem;
+}
+.marca-os { color: var(--elevos-accent); }
+
+/* ---------- cards ---------- */
+.card {
+  --bs-card-bg: var(--elevos-surface);
+  --bs-card-border-color: var(--elevos-border);
+  --bs-card-border-radius: .9rem;
+  --bs-card-inner-border-radius: .85rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset;
+}
+.card-clicavel { transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.card-clicavel:hover {
+  border-color: var(--elevos-border-forte);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -18px rgba(0, 212, 255, .55);
+}
+
+.painel {
+  background: var(--elevos-surface);
+  border: 1px solid var(--elevos-border);
+  border-radius: .9rem;
+}
+
+/* ---------- badges de prioridade ---------- */
+.badge-prio {
+  font-family: var(--bs-font-monospace);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: .32rem .6rem;
+  border-radius: .45rem;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  display: inline-block;
+}
+.badge-prio.p1 { background: rgba(239, 68, 68, .16); color: #FCA5A5; border-color: rgba(239, 68, 68, .45); }
+.badge-prio.p2 { background: rgba(234, 179, 8, .14); color: #FDE047; border-color: rgba(234, 179, 8, .40); }
+.badge-prio.p3 { background: rgba(34, 197, 94, .13); color: #86EFAC; border-color: rgba(34, 197, 94, .35); }
+.badge-prio.p4 { background: rgba(107, 114, 128, .18); color: #CBD5E1; border-color: rgba(107, 114, 128, .45); }
+
+.badge-status {
+  font-size: .72rem;
+  font-weight: 600;
+  padding: .3rem .55rem;
+  border-radius: .45rem;
+  border: 1px solid var(--elevos-border);
+  background: rgba(255, 255, 255, .04);
+  color: var(--elevos-texto-fraco);
+  white-space: nowrap;
+  display: inline-block;
+}
+.badge-status.aberta { color: #FCA5A5; border-color: rgba(239, 68, 68, .35); background: rgba(239, 68, 68, .10); }
+.badge-status.despachada { color: #7DD3FC; border-color: rgba(0, 212, 255, .35); background: rgba(0, 212, 255, .10); }
+.badge-status.em_atendimento { color: #FDE047; border-color: rgba(234, 179, 8, .35); background: rgba(234, 179, 8, .10); }
+.badge-status.resolvida { color: #86EFAC; border-color: rgba(34, 197, 94, .30); background: rgba(34, 197, 94, .10); }
+
+/* ---------- cronometro de SLA ---------- */
+.sla {
+  font-family: var(--bs-font-monospace);
+  font-size: .8rem;
+  font-weight: 600;
+  padding: .3rem .55rem;
+  border-radius: .45rem;
+  border: 1px solid var(--elevos-border);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+}
+.sla.ok { color: #86EFAC; border-color: rgba(34, 197, 94, .30); background: rgba(34, 197, 94, .08); }
+.sla.atencao { color: #FDE047; border-color: rgba(234, 179, 8, .35); background: rgba(234, 179, 8, .10); }
+.sla.estourado {
+  color: #FCA5A5;
+  border-color: rgba(239, 68, 68, .45);
+  background: rgba(239, 68, 68, .12);
+  animation: pulsa 1.6s ease-in-out infinite;
+}
+.sla.encerrado { color: var(--elevos-texto-fraco); }
+@keyframes pulsa { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+
+/* ---------- faixa lateral de prioridade nos cards da fila ---------- */
+.faixa-prio { border-left: 3px solid var(--elevos-cinza); }
+.faixa-prio.p1 { border-left-color: var(--elevos-vermelho); }
+.faixa-prio.p2 { border-left-color: var(--elevos-amarelo); }
+.faixa-prio.p3 { border-left-color: var(--elevos-verde); }
+.faixa-prio.p4 { border-left-color: var(--elevos-cinza); }
+
+/* ---------- botoes ---------- */
+.btn-primary {
+  --bs-btn-bg: var(--elevos-accent);
+  --bs-btn-border-color: var(--elevos-accent);
+  --bs-btn-color: #04121F;
+  --bs-btn-hover-bg: #4FE1FF;
+  --bs-btn-hover-border-color: #4FE1FF;
+  --bs-btn-hover-color: #04121F;
+  --bs-btn-active-bg: #00B8DE;
+  --bs-btn-active-border-color: #00B8DE;
+  --bs-btn-active-color: #04121F;
+  --bs-btn-disabled-bg: rgba(0, 212, 255, .35);
+  --bs-btn-disabled-border-color: transparent;
+  --bs-btn-disabled-color: rgba(4, 18, 31, .6);
+  font-weight: 600;
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--elevos-accent);
+  --bs-btn-border-color: var(--elevos-border-forte);
+  --bs-btn-hover-bg: rgba(0, 212, 255, .12);
+  --bs-btn-hover-border-color: var(--elevos-accent);
+  --bs-btn-hover-color: var(--elevos-accent);
+  --bs-btn-active-bg: rgba(0, 212, 255, .2);
+  --bs-btn-active-color: var(--elevos-accent);
+  --bs-btn-active-border-color: var(--elevos-accent);
+  font-weight: 600;
+}
+.btn-suave {
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--elevos-border);
+  color: var(--elevos-texto);
+  font-weight: 500;
+}
+.btn-suave:hover { background: rgba(255, 255, 255, .09); color: #fff; border-color: var(--elevos-border-forte); }
+
+/* ---------- formularios ---------- */
+.form-control, .form-select {
+  background-color: var(--elevos-surface-2);
+  border-color: var(--elevos-border);
+  color: var(--elevos-texto);
+}
+.form-control:focus, .form-select:focus {
+  background-color: var(--elevos-surface-2);
+  border-color: var(--elevos-accent);
+  color: var(--elevos-texto);
+  box-shadow: 0 0 0 .2rem rgba(0, 212, 255, .18);
+}
+.form-control::placeholder { color: #64748B; }
+
+/* ---------- rotulo de secao ---------- */
+.rotulo-secao {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--elevos-texto-fraco);
+}
+
+/* ---------- KPI ---------- */
+.kpi-valor {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.1;
+  color: #F9FAFB;
+}
+
+/* ---------- grafico de barras em CSS puro ---------- */
+.grafico-barras { display: flex; align-items: flex-end; gap: .5rem; height: 170px; }
+.grafico-barras .coluna { flex: 1 1 0; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.grafico-barras .barra {
+  background: linear-gradient(180deg, var(--elevos-accent), rgba(0, 212, 255, .28));
+  border-radius: .35rem .35rem 0 0;
+  min-height: 4px;
+  transition: height .5s cubic-bezier(.2, .7, .3, 1);
+}
+.grafico-barras .valor {
+  font-family: var(--bs-font-monospace);
+  font-size: .7rem;
+  color: var(--elevos-texto-fraco);
+  text-align: center;
+  margin-bottom: .25rem;
+}
+.grafico-legenda {
+  display: flex; gap: .5rem;
+  font-family: var(--bs-font-monospace);
+  font-size: .65rem;
+  color: var(--elevos-texto-fraco);
+  margin-top: .4rem;
+}
+.grafico-legenda span { flex: 1 1 0; text-align: center; }
+
+/* ---------- anel de risco ---------- */
+.anel-risco {
+  --pct: 0;
+  --cor: var(--elevos-verde);
+  width: 58px; height: 58px; flex: 0 0 58px;
+  border-radius: 50%;
+  background: conic-gradient(var(--cor) calc(var(--pct) * 1%), rgba(255, 255, 255, .07) 0);
+  display: grid; place-items: center;
+  position: relative;
+}
+.anel-risco::after {
+  content: "";
+  position: absolute; inset: 6px;
+  border-radius: 50%;
+  background: var(--elevos-surface);
+}
+.anel-risco > span {
+  position: relative; z-index: 1;
+  font-family: var(--bs-font-monospace);
+  font-weight: 700; font-size: .95rem;
+  color: var(--cor);
+}
+
+/* ---------- barra de fator (modal de decomposicao) ---------- */
+.barra-fator { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+.barra-fator > div { height: 100%; border-radius: 99px; transition: width .5s ease; }
+
+/* ---------- SOS (mobile-first) ---------- */
+.btn-sos {
+  width: 100%;
+  text-align: left;
+  padding: 1rem 1.1rem;
+  border-radius: .85rem;
+  border: 1px solid var(--elevos-border);
+  background: var(--elevos-surface);
+  color: var(--elevos-texto);
+  font-weight: 600;
+  font-size: 1.02rem;
+  display: flex; align-items: center; gap: .85rem;
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.btn-sos:hover { border-color: var(--elevos-border-forte); background: var(--elevos-surface-2); }
+.btn-sos:active { transform: scale(.99); }
+.btn-sos.selecionado {
+  border-color: var(--elevos-accent);
+  background: rgba(0, 212, 255, .10);
+  box-shadow: 0 0 0 1px var(--elevos-accent) inset;
+}
+.btn-sos .icone {
+  width: 42px; height: 42px; flex: 0 0 42px;
+  border-radius: .6rem;
+  display: grid; place-items: center;
+  background: rgba(0, 212, 255, .10);
+  border: 1px solid var(--elevos-border);
+}
+.btn-sos.critico .icone { background: rgba(239, 68, 68, .14); border-color: rgba(239, 68, 68, .4); }
+
+/* ---------- modal ---------- */
+.modal-content {
+  background: var(--elevos-surface);
+  border: 1px solid var(--elevos-border);
+  border-radius: 1rem;
+}
+.modal-header, .modal-footer { border-color: var(--elevos-border); }
+
+/* ---------- diversos ---------- */
+.divisor { height: 1px; background: var(--elevos-border); border: 0; opacity: 1; }
+.texto-fraco { color: var(--elevos-texto-fraco); }
+.pill-info {
+  font-size: .75rem;
+  padding: .25rem .6rem;
+  border-radius: 99px;
+  border: 1px solid var(--elevos-border);
+  background: rgba(255, 255, 255, .03);
+  color: var(--elevos-texto-fraco);
+}
+.aviso-armazenamento {
+  background: rgba(234, 179, 8, .12);
+  border: 1px solid rgba(234, 179, 8, .4);
+  color: #FDE047;
+}
+::selection { background: rgba(0, 212, 255, .3); }

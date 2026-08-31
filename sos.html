@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOS — ElevOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/elevos.css" rel="stylesheet">
+</head>
+<body>
+
+<main class="container py-4">
+  <div class="col-12 col-md-6 mx-auto" id="tela"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/regras.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script>
+Store.init();
+
+const codigo = param("codigo") || "ELV-D-1818";
+const elevador = Store.elevadorPorCodigo(codigo);
+let tipoEscolhido = null;
+
+const OPCOES = [
+  { tipo: "preso", rotulo: "Estou preso", ajuda: "Ha pessoas dentro da cabine", critico: true },
+  { tipo: "parado", rotulo: "Elevador parado", ajuda: "Nao se move, sem ninguem dentro" },
+  { tipo: "porta", rotulo: "Porta com problema", ajuda: "Nao abre, nao fecha ou reabre sozinha" },
+  { tipo: "ruido", rotulo: "Ruido estranho", ajuda: "Barulho fora do normal" },
+  { tipo: "outro", rotulo: "Outro", ajuda: "Iluminacao, limpeza, avarias" },
+];
+
+if (!elevador) {
+  $("#tela").innerHTML = `<div class="painel p-4 text-center">
+    ${logoElevos(44)}
+    <h1 class="h5 mt-3 mb-2">QR nao reconhecido</h1>
+    <p class="texto-fraco small mb-3">O codigo <code>${esc(codigo)}</code> nao consta na base.</p>
+    <a class="btn btn-primary btn-sm" href="sos.html?codigo=ELV-D-1818">Usar o elevador de demonstracao</a>
+  </div>`;
+} else {
+  telaFormulario();
+}
+
+/* -------------------------------------------------- formulario ---------- */
+function telaFormulario() {
+  $("#tela").innerHTML = `
+  <div class="text-center mb-4">
+    ${logoElevos(46)}
+    <p class="rotulo-secao mt-2 mb-1">Chamado de emergencia</p>
+    <h1 class="h5 mb-0">${esc(elevador.predio)}</h1>
+    <p class="codigo-elevador mb-0">${esc(elevador.codigo)}</p>
+    <p class="texto-fraco small mb-0">${esc(elevador.endereco)}</p>
+  </div>
+
+  <h2 class="h3 text-center mb-4">Voce precisa de ajuda?</h2>
+
+  <div class="d-grid gap-2 mb-4" id="opcoes">
+    ${OPCOES.map((o) => `
+      <button type="button" class="btn-sos ${o.critico ? "critico" : ""}" data-tipo="${o.tipo}">
+        <span class="icone">${iconeTipo(o.tipo)}</span>
+        <span>
+          <span class="d-block">${o.rotulo}</span>
+          <span class="d-block small fw-normal texto-fraco">${o.ajuda}</span>
+        </span>
+      </button>`).join("")}
+  </div>
+
+  <div id="extras" class="d-none">
+    <div class="mb-3" id="campoPresas">
+      <label class="form-label small" for="presas">Quantas pessoas estao na cabine?</label>
+      <input type="number" class="form-control form-control-lg" id="presas" min="1" max="20" value="1">
+    </div>
+    <div class="mb-3">
+      <label class="form-label small" for="descricao">O que esta acontecendo? <span class="texto-fraco">(opcional)</span></label>
+      <textarea class="form-control" id="descricao" rows="3" placeholder="Ex.: o elevador parou entre o 4o e o 5o andar"></textarea>
+    </div>
+    <div class="mb-4">
+      <label class="form-label small" for="telefone">Seu telefone <span class="texto-fraco">(opcional)</span></label>
+      <input type="tel" class="form-control form-control-lg" id="telefone" placeholder="(11) 90000-0000">
+    </div>
+    <div class="d-grid">
+      <button class="btn btn-primary btn-lg" id="btnEnviar">Pedir socorro agora</button>
+    </div>
+    <p class="text-center texto-fraco small mt-3 mb-0">
+      Seu chamado e classificado automaticamente e entra na fila da central.
+    </p>
+  </div>
+
+  <p class="text-center small mt-4 mb-0"><a href="index.html" class="text-decoration-none texto-fraco">ElevOS &middot; voltar ao inicio da demo</a></p>`;
+
+  $$("#opcoes .btn-sos").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tipoEscolhido = btn.dataset.tipo;
+      $$("#opcoes .btn-sos").forEach((b) => b.classList.toggle("selecionado", b === btn));
+      $("#extras").classList.remove("d-none");
+      $("#campoPresas").classList.toggle("d-none", tipoEscolhido !== "preso");
+      $("#btnEnviar").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+
+  $("#btnEnviar").addEventListener("click", enviar);
+}
+
+/* ------------------------------------------------------ envio ----------- */
+function enviar() {
+  if (!tipoEscolhido) return;
+  const nova = Store.criarOcorrencia({
+    elevadorId: elevador.id,
+    tipo: tipoEscolhido,
+    origem: "qr",
+    descricao: $("#descricao").value.trim(),
+    pessoasPresas: tipoEscolhido === "preso" ? Number($("#presas").value || 1) : 0,
+    telefoneContato: $("#telefone").value.trim() || null,
+  });
+  telaConfirmacao(nova);
+}
+
+/* ------------------------------------------------ confirmacao ----------- */
+function telaConfirmacao(oc) {
+  const info = PRIORIDADES[oc.prioridade];
+
+  $("#tela").innerHTML = `
+  <div class="text-center mb-4">
+    ${logoElevos(46)}
+    <p class="rotulo-secao mt-2 mb-0">Chamado registrado</p>
+  </div>
+
+  <div class="painel p-4 text-center mb-3">
+    <div class="mb-3">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--elevos-verde)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9.2"/><path d="M8 12.3l2.7 2.7L16.2 9.5"/>
+      </svg>
+    </div>
+    <h1 class="h4 mb-1">Ajuda a caminho</h1>
+    <p class="texto-fraco small mb-3">A central de operacao ja recebeu seu chamado.</p>
+
+    <div class="d-flex justify-content-center gap-2 mb-3 flex-wrap">
+      ${badgePrioridade(oc.prioridade)}
+      <span class="pill-info">SLA ${formatarDuracao(info.slaMinutos)}</span>
+    </div>
+
+    <div class="row g-3 text-start small">
+      <div class="col-6"><span class="texto-fraco d-block">Chamado</span><span class="fonte-mono fw-bold">#${oc.id}</span></div>
+      <div class="col-6"><span class="texto-fraco d-block">Equipamento</span><span class="codigo-elevador fw-bold">${esc(elevador.codigo)}</span></div>
+      <div class="col-12"><span class="texto-fraco d-block">Local</span>${esc(elevador.predio)}</div>
+      <div class="col-12"><span class="texto-fraco d-block">Prazo maximo de atendimento</span>${prazoTexto(info.slaMinutos)}</div>
+    </div>
+  </div>
+
+  <div class="painel p-3 mb-4">
+    <p class="rotulo-secao mb-2">Como a prioridade foi definida</p>
+    <p class="small mb-0">${esc(oc.motivoPrioridade)}</p>
+  </div>
+
+  <div class="d-grid gap-2">
+    <a class="btn btn-primary" href="ocorrencias.html">Ver o chamado na fila da central</a>
+    <a class="btn btn-suave" href="sos.html?codigo=${esc(elevador.codigo)}">Abrir outro chamado</a>
+  </div>
+
+  <p class="text-center texto-fraco small mt-3 mb-0">Mantenha a calma e nao tente forcar as portas.</p>`;
+}
+
+const prazoTexto = (minutos) => {
+  const limite = new Date(Date.now() + minutos * 60000);
+  return `${formatarDuracao(minutos)} (ate ${limite.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })})`;
+};
+</script>
+</body>
+</html>
